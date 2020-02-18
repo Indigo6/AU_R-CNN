@@ -61,6 +61,7 @@ class AUDataset(chainer.dataset.DatasetMixin):
                         self.video_offset[video_id] = len(self.result_data)
                     self.video_count[video_id] += 1
                     if os.path.exists(img_path):
+                        print("Existing img path: ", img_path)
                         self.result_data.append((img_path, from_img_path, AU_set, current_database_name))
         self.result_data.sort(key=lambda entry: (entry[0].split("/")[-3],entry[0].split("/")[-2],
                                                  int(entry[0].split("/")[-1][:entry[0].split("/")[-1].rindex(".")])))

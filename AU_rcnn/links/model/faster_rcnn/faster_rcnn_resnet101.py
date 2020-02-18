@@ -223,7 +223,7 @@ class ResRoIHead(chainer.Chain):
     """Faster R-CNN Head for VGG-16 based implementation.
 
     This class is used as a head for Faster R-CNN.
-    This outputs class-wise classification based on feature
+    #CLUE: This outputs class-wise classification based on feature
     maps in the given RoIs.
 
     Args:

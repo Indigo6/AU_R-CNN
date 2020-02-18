@@ -1,7 +1,7 @@
 #!/usr/local/anaconda3/bin/python3
 from __future__ import division
 import sys
-sys.path.insert(0, '/home/machen/face_expr')
+sys.path.insert(0, '/home/data3/fanglin/AU_R-CNN/')
 
 from AU_rcnn.links.model.faster_rcnn.faster_rcnn_vgg19 import FasterRCNNVGG19
 from AU_rcnn.links.model.faster_rcnn.faster_rcnn_mobilenet_v1 import FasterRCNN_MobilenetV1
@@ -218,7 +218,7 @@ def main():
                 transform_test_data = TransformDataset(test_data,
                                              Transform(faster_rcnn, mirror=False))
                 transform_test_data = TransformDataset(transform_test_data, OccludeTransform(args.occlude))
-
+                print("transform_test_data is: ", transform_test_data)
                 if args.proc_num == 1:
                     test_iter = SerialIterator(transform_test_data, 1, repeat=False, shuffle=True)
                 else:
@@ -229,8 +229,8 @@ def main():
                 chainer.cuda.get_device_from_id(gpu).use()
                 faster_rcnn.to_gpu(gpu)
                 evaluator = AUEvaluator(test_iter, faster_rcnn,
-                                        lambda batch, device: concat_examples_not_none(batch, device, padding=-99),
-                                        args.database, "/home/machen/face_expr", device=gpu, npz_out_path=args.out
+                                        lambda batch, device: concat_examples_not_none(batch, gpu, padding=-99),
+                                        args.database, "/home/data3/fanglin/AU_R-CNN_ouput", device=gpu, npz_out_path=args.out
                                         + os.path.sep + "npz_occlude_{0}_split_{1}.npz".format(args.occlude, args.split_idx))
                 observation = evaluator.evaluate()
                 with open(
@@ -246,6 +246,7 @@ def main():
                                       pretrained_target=args.pretrained_target, is_FERA=args.FERA)
                 test_data = TransformDataset(test_data,
                                              Transform(faster_rcnn, mirror=False))
+                print("test_data is: ", test_data)
                 if args.fake_box:
                     test_data = TransformDataset(test_data, FakeBoxTransform(args.database))
                 if args.proc_num == 1:
@@ -259,8 +260,8 @@ def main():
                 chainer.cuda.get_device_from_id(gpu).use()
                 faster_rcnn.to_gpu(gpu)
                 evaluator = AUEvaluator(test_iter, faster_rcnn,
-                                        lambda batch, device: concat_examples_not_none(batch, device, padding=-99),
-                                        args.database, "/home/machen/face_expr", device=gpu, npz_out_path=args.out
+                                        lambda batch, device: concat_examples_not_none(batch, gpu, padding=-99),
+                                        args.database, "/home/data3/fanglin/AU_R-CNN_ouput", device=gpu, npz_out_path=args.out
                                                                 + os.path.sep + "npz_split_{}.npz".format(args.split_idx))
                 observation = evaluator.evaluate()
                 with open(args.out + os.path.sep + "evaluation_split_{}_result_test_mode.json".format(args.split_idx), "w") as file_obj:
