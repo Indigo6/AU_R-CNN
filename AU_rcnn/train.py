@@ -1,6 +1,7 @@
 #!/usr/local/anaconda3/bin/python3
 from __future__ import division
 import sys
+import pdb
 sys.path.insert(0, '/home/data3/fanglin/AU_R-CNN/')
 
 from AU_rcnn.links.model.faster_rcnn.faster_rcnn_vgg19 import FasterRCNNVGG19
@@ -195,6 +196,7 @@ def main():
                                       min_size=args.img_resolution, max_size=args.img_resolution,
                                       extract_len=args.extract_len, dataset=args.database, fold=args.fold, split_idx=args.split_idx)
     elif args.feature_model == 'resnet101':
+        #NOTE: print("config.AU_SQUEEZE is: ", config.AU_SQUEEZE)
         faster_rcnn = FasterRCNNResnet101(n_fg_class=len(config.AU_SQUEEZE),
                                       pretrained_model=args.pretrained_model,
                                       mean_file=args.mean,  min_size=args.img_resolution,max_size=args.img_resolution,
@@ -246,6 +248,7 @@ def main():
                                       pretrained_target=args.pretrained_target, is_FERA=args.FERA)
                 test_data = TransformDataset(test_data,
                                              Transform(faster_rcnn, mirror=False))
+                pdb.set_trace()
                 print("test_data is: ", test_data)
                 if args.fake_box:
                     test_data = TransformDataset(test_data, FakeBoxTransform(args.database))
