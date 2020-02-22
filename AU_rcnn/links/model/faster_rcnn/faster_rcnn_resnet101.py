@@ -133,6 +133,9 @@ class FasterRCNNResnet101(FasterRCNN):
         elif pretrained_model.endswith(".npz"):
             print("loading :{} to AU R-CNN ResNet-101".format(pretrained_model))
             chainer.serializers.load_npz(pretrained_model, self)
+        elif pretrained_model.endswith(".model"):
+            print("loading :{} to AU R-CNN ResNet-101".format(pretrained_model))
+            chainer.serializers.load_npz(pretrained_model, self)
 
     def _copy_imagenet_pretrained_resnet101(self, path):
         pretrained_model = ResNet101Layers(pretrained_model=path)
@@ -245,6 +248,7 @@ class ResRoIHead(chainer.Chain):
         with self.init_scope():
             self.res5 = Block(3, 1024, 512, 2048)
             self.fc = L.Linear(2048, extract_len, initialW=fc_initialW)
+            #CLUE: Final output layer
             self.score = L.Linear(extract_len, n_class, initialW=score_initialW)
         self.functions = collections.OrderedDict([
             ('res5',  [self.res5]),

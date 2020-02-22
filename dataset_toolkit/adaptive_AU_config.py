@@ -20,6 +20,8 @@ def adaptive_AU_database(database_name, use_paper_only=False):
             database_use_AU = config.DISFA_use_AU
     elif database_name == "BP4D_DISFA":
         database_use_AU = config.DISFA_use_AU # BP4D_DISFA 仍然按照DISFA来训练
+    elif database_name == "ENC":
+        database_use_AU = config.ENC_use_AU
     new_AU_ROI = OrderedDict()
     for AU in config.AU_ROI.keys():
         if AU in database_use_AU:

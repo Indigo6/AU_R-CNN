@@ -57,6 +57,7 @@ class AUEvaluator(chainer.training.extensions.Evaluator):
             if bbox.shape[1] != config.BOX_NUM[self.database]:
                 print("error box num {0} != {1}".format(bbox.shape[1], config.BOX_NUM[self.database]))
                 continue
+            #CLUE: Output shape
             preds, scores = target.predict(imgs, bbox)  # R', class_num
             try:
                 preds = preds.reshape(labels.shape[0], labels.shape[1], labels.shape[2])  # shape = B, F, Y
@@ -68,9 +69,13 @@ class AUEvaluator(chainer.training.extensions.Evaluator):
             preds = chainer.cuda.to_cpu(preds) # B, F, Y, where B always = 1
             labels = chainer.cuda.to_cpu(labels)  # B, F, Y
             scores = chainer.cuda.to_cpu(scores)  # B, F, Y
+            print("Current idx: ", idx)
+            print("gt label: ", labels)
+            print("predict: ", preds)
             npz_pred.extend(preds)
             npz_gt.extend(labels)
             npz_pred_score.extend(scores)
+            #CLUE: AUs of whole face euqals or-sum of AUs of ROIS
             preds = np.bitwise_or.reduce(preds, axis=1)  # shape = B, Y
             gt_labels = np.bitwise_or.reduce(labels, axis=1) # shape = B, Y
 

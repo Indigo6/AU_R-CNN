@@ -9,8 +9,9 @@ import config
 from dataset_toolkit.compress_utils import get_zip_ROI_AU, get_AU_couple_child
 from img_toolkit.face_mask_cropper import FaceMaskCropper
 import random
+import pdb
 
-# obtain the cropped face image and bounding box and ground truth label for each box
+#CLUE: obtain the cropped face image and bounding box and ground truth label for each box
 class AUDataset(chainer.dataset.DatasetMixin):
 
     def __init__(self, img_resolution, database, fold, split_name, split_index, mc_manager,  train_all_data,
@@ -19,8 +20,11 @@ class AUDataset(chainer.dataset.DatasetMixin):
         self.img_resolution = img_resolution
         self.split_name = split_name
         self.au_couple_dict = get_zip_ROI_AU()
+        # print("au_couple_dict is: ", self.au_couple_dict)
         self.mc_manager = mc_manager
+        # pdb.set_trace()
         self.au_couple_child_dict = get_AU_couple_child(self.au_couple_dict)
+        # print("au_couple_child_dict is: ", self.au_couple_child_dict)
         self.AU_intensity_label = {}  # subject + "/" + emotion_seq + "/" + frame => ... not implemented
         self.pretrained_target = pretrained_target
         self.dir = config.DATA_PATH[database] # BP4D/DISFA/ BP4D_DISFA
@@ -42,12 +46,16 @@ class AUDataset(chainer.dataset.DatasetMixin):
         self.video_offset = OrderedDict()
         self.video_count = defaultdict(int)
         print("idfile:{}".format(id_list_file_path))
+        # pdb.set_trace()
+        print("Building AU_dataset!")
         with open(id_list_file_path, "r") as file_obj:
             for idx, line in enumerate(file_obj):
                 if line.rstrip():
                     line = line.rstrip()
                     img_path, au_set_str, from_img_path, current_database_name = line.split("\t")
-                    AU_set = set(AU for AU in au_set_str.split(',') if AU in config.AU_ROI)
+                    current_database_name = current_database_name.strip()
+                    AU_set = set(AU.strip() for AU in au_set_str.split(',') if AU.strip() in config.AU_ROI)
+                    print("Label of %s is %s, with AU_set is %s" % (img_path, au_set_str, AU_set))
                     if au_set_str == "0":
                         AU_set = set()
                     from_img_path = img_path if from_img_path == "#" else from_img_path
@@ -62,9 +70,10 @@ class AUDataset(chainer.dataset.DatasetMixin):
                     self.video_count[video_id] += 1
                     if os.path.exists(img_path):
                         print("Existing img path: ", img_path)
+                        #CLUE: 数据集在这里构建结束
                         self.result_data.append((img_path, from_img_path, AU_set, current_database_name))
-        self.result_data.sort(key=lambda entry: (entry[0].split("/")[-3],entry[0].split("/")[-2],
-                                                 int(entry[0].split("/")[-1][:entry[0].split("/")[-1].rindex(".")])))
+        # self.result_data.sort(key=lambda entry: (entry[0].split("/")[-3],entry[0].split("/")[-2],
+        #                                          int(entry[0].split("/")[-1][:entry[0].split("/")[-1].rindex(".")])))
         self._num_examples = len(self.result_data)
         print("read id file done, all examples:{}".format(self._num_examples))
 
@@ -87,8 +96,10 @@ class AUDataset(chainer.dataset.DatasetMixin):
                 # elif AU.startswith("?"):
                 #     AU_squeeze = config.AU_SQUEEZE.inv[AU[1:]]
                 #     np.put(AU_bin, AU_squeeze, -1)  # ignore label
+            #CLUE: 所有同区域AU的binary_label
             AU_couple_bin[au_couple_tuple] = AU_bin  # for the child
         # 循环两遍，第二遍拿出child_AU_couple
+        # pdb.set_trace()
         for au_couple_tuple, box_list in couple_box_dict.items():
             AU_child_bin = np.zeros(shape=len(config.AU_SQUEEZE), dtype=np.int32)
             if au_couple_tuple in self.au_couple_child_dict:
@@ -102,12 +113,13 @@ class AUDataset(chainer.dataset.DatasetMixin):
                 for unknown_index in unknown_indices:
                     if AU_child_bin[unknown_index] == 1 or AU_bin_tmp[unknown_index] == 1:
                         AU_bin[unknown_index] = 1
+            #NOTE: bbox顺序是固定的，因为 couple_box_dict 是 OrderedDict
             bbox.extend(box_list)
             for _ in box_list:
                 label.append(AU_bin)
                 AU_couple_lst.append(au_couple_tuple)
 
-
+    #CLUE: 重载函数get_example(self，i)这个函数实现用来返回第i个数据。
     def get_example(self, i):
         '''
         Returns a color image and bounding boxes. The image is in CHW format.
@@ -135,11 +147,11 @@ class AUDataset(chainer.dataset.DatasetMixin):
             key_prefix = self.database +"@{}".format(self.img_resolution) +"|"
             if self.pretrained_target is not None and len(self.pretrained_target) > 0:
                 key_prefix = self.pretrained_target+"|"
-
+            #CLUE: 裁剪后的图片和AU_ROI_BBOXES 在这里获取结束
             cropped_face, AU_box_dict = FaceMaskCropper.get_cropface_and_box(read_img_path, rgb_img_path,
                                                                                channel_first=True,
                                                                                mc_manager=self.mc_manager, key_prefix=key_prefix)
-
+            # print("         Length of AU_box_dict is: ", len(AU_box_dict))
         except IndexError:
             print("crop image error:{}".format(read_img_path))
             label = np.zeros(len(config.AU_SQUEEZE), dtype=np.int32)
@@ -163,8 +175,11 @@ class AUDataset(chainer.dataset.DatasetMixin):
                 non_AU_set.add("-{}".format(AU))
         unknown_AU_set = set()
         known_AU_set = set()
+        # print("Current image: ", img_path)
+        # print("AU_set is: ", AU_set)
         for AU in AU_set:
             if AU.startswith("?"):
+                print("             AU.startswith(\"?\"): ", AU)
                 unknown_AU_set.add(AU)
             else:
                 known_AU_set.add(AU)
@@ -173,7 +188,9 @@ class AUDataset(chainer.dataset.DatasetMixin):
         all_AU_set.update(unknown_AU_set)
         all_AU_set.update(known_AU_set)
 
+        #CLUE: current_AU_couple 形如 {(1,2,5,7):(-1,2,-5,-7), ...}
         current_AU_couple = defaultdict(set) # key = AU couple, value = AU 用于合并同一个区域的不同AU
+        #CLUE: couple_box_dict 形如 {(1,2,5,7):[bbox1,...], ...}
         couple_box_dict = OrderedDict()  # key= AU couple
 
         # mask_path_dict's key AU maybe 3 or -2 or ?5
@@ -185,17 +202,29 @@ class AUDataset(chainer.dataset.DatasetMixin):
             except KeyError:
                 print(list(self.au_couple_dict.keys()), _AU)
                 raise
+        # print("sorted(AU_box_dict.items(), key=lambda e:int(e[0])) is: ", \
+        #       sorted(AU_box_dict.items(), key=lambda e:int(e[0])))
         for AU, box_list in sorted(AU_box_dict.items(), key=lambda e:int(e[0])):
             _AU = AU if AU.isdigit() else AU[1:]
-            couple_box_dict[self.au_couple_dict[_AU]] = box_list  # 所以这一步会把脸上有的，没有的AU都加上
+            couple_box_dict[self.au_couple_dict[_AU]] = box_list  
+            # 所以这一步会把脸上有的，没有的AU都加上
+            #NOTE: ...不就是不只用 gt_AU_label 对应的bbox裁剪嘛，本应该的操作
         label = []  # one box may have multiple labels. so each entry is 10101110 binary code
         bbox = []  # AU = 0背景的box是随机取的
         AU_couple_lst = []
+        # pdb.set_trace()
+        # CLUE: AU_set 就是 gt_AU_label 里的 AU
+        # print('Check before assign_label, AU_set is: ', AU_set)
+        # print("     couple_box_dict is: ", couple_box_dict)
+        # print("     current_AU_couple is: ", current_AU_couple)
         self.assign_label(couple_box_dict, current_AU_couple, bbox, label, AU_couple_lst)
         # print("assigned label over")
         if len(bbox) == 0:
             print("no box found on face")
             return self.get_example(i-1)
+        # print("         Length of couple_box_dict is: ", len(couple_box_dict))
+        # print("         Length of bbox list is: ", len(bbox))
+        # print("         Length of label list is: ", len(label))
         bbox = np.stack(bbox).astype(np.float32)
         label = np.stack(label).astype(np.int32)
         # bbox, label = self.proposal(bbox, label)  # 必须保证每个batch拿到的box数量一样

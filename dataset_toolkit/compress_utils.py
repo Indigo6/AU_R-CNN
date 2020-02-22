@@ -27,12 +27,19 @@ def get_zip_ROI_AU():
     for au_lst in regionlst_AU_dict.values():
         for AU in au_lst:
             AU_couple_dict[AU] = tuple(map(str, sorted(map(int,au_lst))))
-
+    #CLUE: AU_couple_dict 释义在这里
     return AU_couple_dict # AU -> (AU tuple with same region)
 
 def get_AU_couple_child(AU_couple_dict):
     # must be called after def adaptive_AU_database
     AU_couple_child = defaultdict(set) # may have multiple child regions
+    '''
+    itertools.combinations(iterable, r)
+        将 iterable 中的元素按照 r 个 r 个组合。（比如 r=2，那就是两个两个组合）
+        排列顺序不可变，元素不重复（同一个组合内不重复）。
+        In : list(itertools.combinations('123', 2))
+        Out: [('1', '2'), ('1', '3'), ('2', '3')]
+    '''
     for AU_region_a, AU_region_b in itertools.combinations(config.AU_ROI.items(),2):
         AU_a, region_lst_a = AU_region_a
         AU_b, region_lst_b = AU_region_b

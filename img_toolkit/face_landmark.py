@@ -81,6 +81,7 @@ class FaceLandMark(object, metaclass=Singleton):
             return sort_clockwise(point_arr)
 
         polygons = {}
+        #CLUE: config.ROI_LANDMARK 编码了ROI多边形顶点来源和偏移
         for roi_no, landmark_ls in config.ROI_LANDMARK.items():
             polygon_arr = trans_landmark2pointarr(landmark_ls)
             polygon_arr = polygon_arr.astype(np.int32)

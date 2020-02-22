@@ -59,7 +59,7 @@ def main():
     parser.add_argument('--lr', '-l', type=float, default=0.001)
     parser.add_argument('--out', '-o', default='result',
                         help='Output directory')
-    parser.add_argument('--database',  default='BP4D',
+    parser.add_argument('--database',  default='ENC',
                         help='Output directory: BP4D/DISFA/BP4D_DISFA')
     parser.add_argument('--seed', '-s', type=int, default=0)
     parser.add_argument('--iteration', '-i', type=int, default=70000)
@@ -95,8 +95,10 @@ def main():
 
     print('GPU: {}'.format(args.gpu))
     if args.is_pretrained:
+        print("branch to 'if args.is_pretrained'")
         adaptive_AU_database(args.pretrained_target)
     else:
+        print("Not branch to 'if args.is_pretrained'")
         adaptive_AU_database(args.database)
     np.random.seed(args.seed)
     # 需要先构造一个list的txt文件:id_trainval_0.txt, 每一行是subject + "/" + emotion_seq + "/" frame

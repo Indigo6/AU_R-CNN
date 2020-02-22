@@ -1,3 +1,9 @@
+import os
+import sys
+current_dir = os.path.abspath(os.path.dirname(__file__))
+sys.path.append(current_dir)
+sys.path.append("..")
+# print(sys.path)
 import cv2
 import functools
 from img_toolkit.face_landmark import FaceLandMark
@@ -5,6 +11,7 @@ import config
 from img_toolkit.face_region_mask import crop_face_mask_from_landmark
 import numpy as np
 from collections import defaultdict
+import pdb
 
 
 class FaceMaskCropper(object):
@@ -39,11 +46,13 @@ class FaceMaskCropper(object):
             print("error read image: {}".format(orig_img_path))
         landmark_dict, _, _ = FaceMaskCropper.landmark.landmark(image=orig_img, need_txt_img=False)
         assert len(landmark_dict) == 67
+        #CLUE: crop from here
         new_face, rect = FaceMaskCropper.dlib_face_crop(orig_img, landmark_dict)
         del orig_img
         new_face = cv2.resize(new_face, config.IMG_SIZE)
         AU_mask_dict = dict()
         for AU in config.AU_ROI.keys():
+            pdb.set_trace()
             mask = crop_face_mask_from_landmark(AU, landmark_dict, new_face, rect, FaceMaskCropper.landmark)
             AU_mask_dict[AU] = mask
         if channel_first:
@@ -85,23 +94,32 @@ class FaceMaskCropper(object):
         rgb_img = orig_img
         if rgb_img_path != orig_img_path:
             rgb_img = cv2.imread(rgb_img_path, cv2.IMREAD_COLOR)
+            if rgb_img is None:
+                rgb_img = orig_img
+        # print("orig_img_path is: ", orig_img_path)
+        # print("rgb_img_path is: ", rgb_img_path)
+        # print("RGB_IMG.shape = ", rgb_img.shape)
         landmark_dict, _, _ = FaceMaskCropper.landmark.landmark(rgb_img, need_txt_img=False)
         new_face, rect = FaceMaskCropper.dlib_face_crop(orig_img, landmark_dict)
         new_face = cv2.resize(new_face, config.IMG_SIZE)
 
         del orig_img
         AU_box_dict =defaultdict(list)
-
+        #CLUE: AU_box_dict{AU} 存有该AU对应的ROI BBOXES
+        # print("     Length of config.AU_ROI.keys() is: ", len(config.AU_ROI.keys()))
         for AU in config.AU_ROI.keys():
             mask = crop_face_mask_from_landmark(AU, landmark_dict, new_face, rect, landmarker=FaceMaskCropper.landmark)
             connect_arr = cv2.connectedComponents(mask, connectivity=8, ltype=cv2.CV_32S)  # mask shape = 1 x H x W
+            # pdb.set_trace()
             component_num = connect_arr[0]
+            #NOTE: 创建了一个标记图（图中不同连通域使用不同的标记，和原图宽高一致）
             label_matrix = connect_arr[1]
             # convert mask polygon to rectangle
             for component_label in range(1, component_num):
-
+                #NOTE: 完成转置
                 row_col = list(zip(*np.where(label_matrix == component_label)))
                 row_col = np.array(row_col)
+                #CLUE: 获得当前连通域的边界
                 y_min_index = np.argmin(row_col[:, 0])
                 y_min = row_col[y_min_index, 0]
                 x_min_index = np.argmin(row_col[:, 1])
@@ -124,6 +142,7 @@ class FaceMaskCropper(object):
                 AU_box_dict[AU].append(coordinates)
             del label_matrix
             del mask
+        # print("AU_box_dict is: ", AU_box_dict)
         if mc_manager is not None:
             try:
                 save_dict = {"crop_rect":rect, "AU_box_dict":AU_box_dict, "landmark_dict":landmark_dict}
@@ -139,10 +158,9 @@ class FaceMaskCropper(object):
 
 
 if __name__ == "__main__":
-
-    new_face, AU_mask_dict = FaceMaskCropper.get_cropface_and_mask("/home/machen/dataset//BP4D/BP4D-training//M018/T8/187.jpg", channel_first=False)
-    cv2.imwrite("/home/machen/tmp/newface.jpg", new_face)
+    new_face, AU_mask_dict = FaceMaskCropper.get_cropface_and_mask("/home/data3/fanglin/temp/test.jpg", channel_first=False)
+    cv2.imwrite("/home/data3/fanglin/temp/newface.jpg", new_face)
     for AU, mask in AU_mask_dict.items():
         mask = cv2.cvtColor(mask, cv2.COLOR_GRAY2RGB)
         new_mask = cv2.add(new_face, mask)
-        cv2.imwrite("/home/machen/tmp/mask_{}.jpg".format(AU), new_mask)
+        cv2.imwrite("/home/data3/fanglin/temp/mask_{}.jpg".format(AU), new_mask)

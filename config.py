@@ -5,7 +5,7 @@ import cv2
 from bidict import bidict
 
 # ROOT_PATH = "/home/machen/dataset/"
-ROOT_PATH = "G:/dataset/Facial AU detection dataset/"
+ROOT_PATH = "/home/data3/fanglin/data/"
 
 DATA_PATH = {
     "ck+": ROOT_PATH + "/CK+",
@@ -14,7 +14,9 @@ DATA_PATH = {
     "mnist": ROOT_PATH + "/mnist",
     "BP4D": ROOT_PATH + "/BP4D/",
     "DISFA": ROOT_PATH + "/DISFA/",
-    "BP4D_DISFA": ROOT_PATH + "/BP4D_DISFA/"
+    "BP4D_DISFA": ROOT_PATH + "/BP4D_DISFA/",
+    # "ENC": ROOT_PATH + "/BP4D/"
+    "ENC": "/home/data3/fanglin/enc2020/"
 }
 
 FLOW_PATH = {
@@ -23,7 +25,7 @@ FLOW_PATH = {
 }
 
 RGB_PATH = {
-    # "BP4D": ROOT_PATH + "/BP4D/BP4D-training/",
+    "ENC": "/home/data3/fanglin/enc2020/",
     "BP4D": ROOT_PATH + "/BP4D/BP4D-training",
     "DISFA": ROOT_PATH + "DISFA/",
 }
@@ -103,7 +105,7 @@ LABEL_FETCH = {
     ('10', '11', '12', '13', '14', '15'): [('18', '22', '23', '24', '28'),('16', '20', '25', '26', '27')],
     ('16', '20', '25', '26', '27'): [('10', '11', '12', '13', '14', '15'),],
 }
-# 时刻搞清楚到底AU号和label之间的对应关系
+# 时刻搞清楚到底AU号和ROI之间的对应关系
 AU_ROI = OrderedDict({"1":[1, 2, 8, 9, 5, 6, 12, 13, 40, 41, 42, 43],  # 修改，增加眼睛部分，与5和7一致
                       "2":[1, 2, 8, 9, 5, 6, 12, 13, 40, 41, 42, 43],  # 修改与1一样
                       "4":[1, 2, 3, 4, 8, 9, 5, 6, 12, 13, 40, 41],  # 增加3和4：皱眉头的眉头部分
@@ -151,11 +153,13 @@ SYMMETRIC_AU = ["1","2","5","7"]
 
 BP4D_use_AU = ["1", "2", "4", "5", "6", "7", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "20", "22", "23", "24", "27", "28"]
 DISFA_use_AU = ["1", "2", "4", "5", "6", "9", "12", "15", "17", "20", "25", "26"]
+ENC_use_AU = ['1', '2', '4', '5', '6', '9', '10', '12', '15', '17', '18', '20', \
+              '24', '25', '26', '28', '43', '51', '52', '53', '54', '55', '56']
 
 paper_use_BP4D = ["1", "2", "4", "6", "7", "10", "12", "14", "15", "17", "23", "24"]
 paper_use_DISFA = ["1", "2", "4", "6", "9", "12", "25", "26"]
 
-BOX_NUM = {"BP4D":9, "DISFA":8}
+BOX_NUM = {"BP4D":9, "DISFA":8, "ENC":12}
 # AU_SQUEEZE all 0 means is actually background
 AU_SQUEEZE = bidict({idx : str(AU) for idx, AU in enumerate(sorted(map(int, list(AU_ROI.keys()))))}) # inside train or test, always use key
 

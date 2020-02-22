@@ -19,6 +19,7 @@ import os
 
 import chainer
 from chainer import training
+from chainer import serializers
 
 from chainer.datasets import TransformDataset
 from AU_rcnn.links.model.faster_rcnn import FasterRCNNTrainChain, FasterRCNNVGG16, FasterRCNNResnet101
@@ -79,6 +80,7 @@ class Transform(object):
 
         img, bbox, label = in_data
         _, H, W = img.shape
+        #CLUE: mean_rgb.npy会在这里被用到，Tranform 了 AU_dataset 返回的 cropped_face, bbox, label
         img = self.faster_rcnn.prepare(img)
         _, o_H, o_W = img.shape
         bbox = transforms.resize_bbox(bbox, (H, W), (o_H, o_W))
@@ -120,13 +122,14 @@ def main():
     parser.add_argument('--out', '-o', default='result',
                         help='Output directory')
     parser.add_argument('--database',  default='BP4D',
-                        help='Output directory: BP4D/DISFA/BP4D_DISFA')
+                        help='Data directory: BP4D/DISFA/BP4D_DISFA')
     parser.add_argument('--seed', '-s', type=int, default=0)
     parser.add_argument('--iteration', '-i', type=int, default=70000)
     parser.add_argument('--epoch', '-e', type=int, default=20)
     parser.add_argument('--batch_size', '-bs', type=int, default=20)
     parser.add_argument('--snapshot', '-snap', type=int, default=1000)
     parser.add_argument('--need_validate', action='store_true', help='do or not validate during training')
+    #CLUE: mean_file 默认上是 config.ROOT_PATH+"BP4D/idx/mean_rgb.npy"
     parser.add_argument('--mean', default=config.ROOT_PATH+"BP4D/idx/mean_rgb.npy", help='image mean .npy file')
     parser.add_argument('--feature_model', default="resnet101", help="vgg16/vgg19/resnet101 for train")
     parser.add_argument('--extract_len', type=int, default=1000)
@@ -168,8 +171,10 @@ def main():
 
     print('GPU: {}'.format(args.gpu))
     if args.is_pretrained:
+        # print("branch to 'if args.is_pretrained'")
         adaptive_AU_database(args.pretrained_target)
     else:
+        # print("Not branch to 'if args.is_pretrained'")
         adaptive_AU_database(args.database)
     np.random.seed(args.seed)
     # 需要先构造一个list的txt文件:id_trainval_0.txt, 每一行是subject + "/" + emotion_seq + "/" frame
@@ -246,9 +251,9 @@ def main():
                                       split_name='test', split_index=args.split_idx, mc_manager=mc_manager,
                                        train_all_data=False, prefix=args.prefix,
                                       pretrained_target=args.pretrained_target, is_FERA=args.FERA)
+                # pdb.set_trace()
                 test_data = TransformDataset(test_data,
                                              Transform(faster_rcnn, mirror=False))
-                pdb.set_trace()
                 print("test_data is: ", test_data)
                 if args.fake_box:
                     test_data = TransformDataset(test_data, FakeBoxTransform(args.database))
@@ -274,18 +279,19 @@ def main():
 
 
 
-
+    print("Begin to build dataset!")
     train_data = AUDataset(database=args.database,img_resolution=args.img_resolution,
                            fold=args.fold, split_name='trainval',
                            split_index=args.split_idx, mc_manager=mc_manager, train_all_data=args.is_pretrained,
                            prefix=args.prefix, pretrained_target=args.pretrained_target, is_FERA=args.FERA
                            )
-
+    print("Finish building dataset.")
 
     train_data = TransformDataset(train_data, Transform(faster_rcnn,mirror=True))
 
     # train_iter = chainer.iterators.SerialIterator(train_data, batch_size, repeat=True, shuffle=False)
 
+    print("Begin to build model!")
     shuffle = True
     if args.proc_num == 1:
         train_iter = SerialIterator(train_data, batch_size, True, shuffle)
@@ -392,10 +398,14 @@ def main():
 
 
 
-    log_interval = 100, 'iteration'
-    print_interval = 100, 'iteration'
-    val_interval = 10000, "iteration"
-    plot_interval = 100, 'iteration'
+    # log_interval = 100, 'iteration'
+    # print_interval = 100, 'iteration'
+    # val_interval = 10000, "iteration"
+    # plot_interval = 100, 'iteration'
+    log_interval = 1, 'iteration'
+    print_interval = 1, 'iteration'
+    val_interval = 1, "iteration"
+    plot_interval = 1, 'iteration'
     if args.optimizer != "Adam" and args.optimizer != "AdaDelta":
         trainer.extend(chainer.training.extensions.ExponentialShift('lr', 0.5),
                        trigger=(10, 'epoch'))
@@ -449,8 +459,12 @@ def main():
         trainer.extend(extensions.Evaluator(iterator=validate_iter, target=model,
                                             converter=lambda batch, device: concat_examples(batch, device, padding=-99),
                                             device=gpu), trigger=val_interval)
-
+    print("Finish building model.")
+    print("Begin to run!")
+    # pdb.set_trace()
     trainer.run()
+    serializers.save_npz('{}/AU_R-CNN_faster_rcnn.model'.format(args.out), faster_rcnn)
+    serializers.save_npz('{}/AU_R-CNN.model'.format(args.out), model)
     # cProfile.runctx("trainer.run()", globals(), locals(), "Profile.prof")
     # s = pstats.Stats("Profile.prof")
     # s.strip_dirs().sort_stats("time").print_stats()
